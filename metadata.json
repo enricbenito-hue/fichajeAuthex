@@ -1,0 +1,12 @@
+{
+  "name": "Fichaje AUTHEX S.A",
+  "short_name": "AUTHEX",
+  "description": "Sistema profesional de control horario y gestión de presencia de AUTHEX S.A.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#4f46e5",
+  "theme_color": "#4f46e5",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
