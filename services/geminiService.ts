@@ -1,9 +1,20 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Función para obtener el cliente de forma segura
+const getAIClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("Gemini API Key no detectada. Las funciones de IA estarán limitadas.");
+    return null;
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export const enhanceShiftSummary = async (notes: string): Promise<string> => {
+  const ai = getAIClient();
+  if (!ai) return notes;
+
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -21,6 +32,9 @@ export const enhanceShiftSummary = async (notes: string): Promise<string> => {
 };
 
 export const getWeeklyInsights = async (shiftsData: string): Promise<string> => {
+  const ai = getAIClient();
+  if (!ai) return "Conecta tu API Key para ver análisis inteligentes.";
+
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
