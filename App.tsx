@@ -130,26 +130,15 @@ const App: React.FC = () => {
   if (authStatus === 'unauthenticated') {
     return (
       <Layout user={null} onLogout={() => {}}>
-        <div className="max-w-md mx-auto mt-4 px-4 animate-in">
-          <div className="text-center mb-10 flex flex-col items-center">
-            {/* Contenedor del Logotipo de TOT HERBA usando la imagen proporcionada */}
-            <div className="bg-white p-4 rounded-3xl shadow-sm mb-6 max-w-[280px]">
-              <img 
-                src="https://raw.githubusercontent.com/totherba/branding/main/logo.png" 
-                alt="TOT HERBA - Cosmética Natural" 
-                className="w-full h-auto object-contain"
-                onError={(e) => {
-                  // Fallback visual si la URL no está disponible inmediatamente
-                  e.currentTarget.parentElement!.innerHTML = `
-                    <div class="flex flex-col items-center py-4">
-                      <div class="text-[#3d6b67] text-5xl font-bold tracking-tighter leading-none">TOT</div>
-                      <div class="text-[#3d6b67] text-5xl font-bold tracking-tighter leading-none mb-2">HERBA</div>
-                      <div class="text-[#3d6b67] text-lg font-medium">Cosmética Natural</div>
-                    </div>
-                  `;
-                }}
-              />
+        <div className="max-w-md mx-auto mt-16 px-4 animate-in">
+          <div className="text-center mb-12 flex flex-col items-center">
+            {/* Logotipo Minimalista: Solo Texto en una línea */}
+            <div className="flex items-center mb-4">
+               <h1 className="text-6xl font-black text-emerald-800 tracking-tighter uppercase flex items-baseline">
+                 TOT<span className="ml-2 text-stone-700">HERBA</span>
+               </h1>
             </div>
+            <div className="w-20 h-1 bg-emerald-800/10 rounded-full"></div>
           </div>
           {showRegister ? (
             <RegisterForm onRegister={handleRegister} onSwitchToLogin={() => setShowRegister(false)} />
