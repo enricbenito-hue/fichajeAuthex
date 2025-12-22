@@ -33,9 +33,7 @@ const ClockPanel: React.FC<ClockPanelProps> = ({ activeShift, onClockIn, onClock
   const handleClockOut = async () => {
     setIsProcessing(true);
     let enhanced = notes;
-    if (notes.trim()) {
-      enhanced = await enhanceShiftSummary(notes);
-    }
+    if (notes.trim()) enhanced = await enhanceShiftSummary(notes);
 
     const finalize = (loc?: { latitude: number; longitude: number }) => {
       onClockOut(notes, enhanced, loc);
@@ -48,9 +46,7 @@ const ClockPanel: React.FC<ClockPanelProps> = ({ activeShift, onClockIn, onClock
         (pos) => finalize({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
         () => finalize()
       );
-    } else {
-      finalize();
-    }
+    } else finalize();
   };
 
   const elapsedSeconds = activeShift 
@@ -65,42 +61,49 @@ const ClockPanel: React.FC<ClockPanelProps> = ({ activeShift, onClockIn, onClock
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 flex flex-col items-center">
+    <div className="bg-white rounded-[2rem] shadow-xl shadow-stone-200/50 border border-stone-100 p-8 flex flex-col items-center overflow-hidden relative">
+      <div className="absolute top-0 left-0 w-full h-1 bg-emerald-800"></div>
+      
       <div className="text-center mb-8">
-        <h2 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-2">Hora Actual</h2>
-        <div className="text-4xl font-mono font-bold text-slate-900">
-          {currentTime.toLocaleTimeString()}
+        <h2 className="text-stone-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-3">Tiempo Presente</h2>
+        <div className="text-5xl font-mono font-bold text-stone-900 tracking-tighter">
+          {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
         </div>
-        <p className="text-slate-400 text-sm mt-1">{currentTime.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        <p className="text-stone-500 font-medium text-sm mt-2">{currentTime.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
       </div>
 
       {!activeShift ? (
         <button
           onClick={handleClockIn}
-          className="w-full sm:w-64 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-6 px-8 rounded-2xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex flex-col items-center justify-center gap-2"
+          className="w-full sm:w-72 bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-6 px-8 rounded-2xl shadow-xl shadow-emerald-900/20 transition-all hover:-translate-y-1 active:scale-95 flex flex-col items-center justify-center gap-2 group"
         >
-          <i className="fas fa-play text-2xl"></i>
-          <span>Iniciar Jornada</span>
+          <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+            <i className="fas fa-play text-xl ml-1"></i>
+          </div>
+          <span className="tracking-wide">Iniciar Jornada</span>
         </button>
       ) : (
         <div className="w-full max-w-md space-y-6">
-          <div className="bg-indigo-50 rounded-xl p-6 border border-indigo-100 text-center">
-            <span className="text-indigo-600 text-xs font-bold uppercase block mb-1">Tiempo Transcurrido</span>
-            <div className="text-3xl font-mono font-bold text-indigo-700">
+          <div className="bg-stone-50 rounded-2xl p-6 border border-stone-100 text-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-2 opacity-5">
+               <i className="fas fa-leaf text-6xl"></i>
+            </div>
+            <span className="text-emerald-800 text-[10px] font-bold uppercase block mb-1 tracking-widest">En Curso</span>
+            <div className="text-4xl font-mono font-bold text-stone-800">
               {formatElapsed(elapsedSeconds)}
             </div>
-            <div className="text-slate-500 text-xs mt-2">
-              Iniciado a las {new Date(activeShift.startTime).toLocaleTimeString()}
+            <div className="text-stone-400 text-[10px] font-bold mt-2">
+              DESDE LAS {new Date(activeShift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Resumen de tareas (Opcional)</label>
+            <label className="text-xs font-bold text-stone-500 uppercase tracking-wider ml-1">Observaciones</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="¿Qué has hecho hoy? La IA mejorará tu resumen..."
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all resize-none"
+              placeholder="¿Cómo ha ido el día?..."
+              className="w-full px-5 py-4 rounded-2xl bg-stone-50 border-none focus:ring-2 focus:ring-emerald-800 outline-none transition-all resize-none text-stone-700 placeholder-stone-300"
               rows={3}
             />
           </div>
@@ -108,14 +111,10 @@ const ClockPanel: React.FC<ClockPanelProps> = ({ activeShift, onClockIn, onClock
           <button
             onClick={handleClockOut}
             disabled={isProcessing}
-            className={`w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg shadow-red-100 transition-all active:scale-95 flex items-center justify-center gap-3 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-full bg-stone-800 hover:bg-stone-900 text-white font-bold py-5 px-8 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            {isProcessing ? (
-              <i className="fas fa-spinner fa-spin"></i>
-            ) : (
-              <i className="fas fa-stop"></i>
-            )}
-            <span>Terminar Jornada</span>
+            {isProcessing ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-sign-out-alt"></i>}
+            <span>Cerrar Jornada</span>
           </button>
         </div>
       )}

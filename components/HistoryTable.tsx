@@ -18,63 +18,64 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ shifts }) => {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-        <h3 className="font-bold text-slate-800 flex items-center gap-2">
-          <i className="fas fa-history text-indigo-500"></i>
-          Historial de Turnos
+    <div className="bg-white rounded-[2rem] shadow-sm border border-stone-100 overflow-hidden">
+      <div className="px-8 py-6 border-b border-stone-50 flex justify-between items-center bg-stone-50/50">
+        <h3 className="font-bold text-stone-800 flex items-center gap-3">
+          <i className="fas fa-seedling text-emerald-700"></i>
+          Registro de Actividad
         </h3>
-        <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
-          Últimos {shifts.length} registros
+        <span className="text-[10px] font-bold text-stone-400 bg-white border border-stone-100 px-3 py-1 rounded-full uppercase tracking-widest">
+          {shifts.length} Entradas
         </span>
       </div>
       
       <div className="overflow-x-auto">
         <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs font-bold uppercase tracking-wider">
+          <thead className="bg-stone-50/80 text-stone-400 text-[10px] font-bold uppercase tracking-[0.2em]">
             <tr>
-              <th className="px-6 py-3">Fecha</th>
-              <th className="px-6 py-3">Inicio</th>
-              <th className="px-6 py-3">Fin</th>
-              <th className="px-6 py-3">Duración</th>
-              <th className="px-6 py-3">Notas IA</th>
+              <th className="px-8 py-4">Fecha</th>
+              <th className="px-8 py-4">Ciclo</th>
+              <th className="px-8 py-4">Duración</th>
+              <th className="px-8 py-4">Eco-Notas</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-stone-50">
             {sortedShifts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">
-                  No hay registros todavía. ¡Empieza tu jornada arriba!
+                <td colSpan={4} className="px-8 py-16 text-center text-stone-400 italic">
+                  No hay registros en tu historial.
                 </td>
               </tr>
             ) : (
               sortedShifts.map((shift) => (
-                <tr key={shift.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-slate-900">
-                      {new Date(shift.startTime).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
-                    </span>
+                <tr key={shift.id} className="hover:bg-stone-50/50 transition-colors">
+                  <td className="px-8 py-5">
+                    <div className="flex flex-col">
+                       <span className="text-sm font-bold text-stone-900">
+                        {new Date(shift.startTime).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                      </span>
+                      <span className="text-[10px] text-stone-400 uppercase font-medium">
+                        {new Date(shift.startTime).toLocaleDateString('es-ES', { weekday: 'long' })}
+                      </span>
+                    </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-slate-600">
+                  <td className="px-8 py-5">
+                    <span className="text-sm text-stone-600 font-medium">
                       {new Date(shift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-slate-600">
+                      <i className="fas fa-arrow-right mx-2 text-[10px] text-stone-300"></i>
                       {shift.endTime 
                         ? new Date(shift.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : '-'}
+                        : 'Actual'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${shift.endTime ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                  <td className="px-8 py-5">
+                    <span className={`text-[10px] font-bold px-3 py-1.5 rounded-xl uppercase tracking-wider ${shift.endTime ? 'bg-emerald-50 text-emerald-800 border border-emerald-100' : 'bg-amber-50 text-amber-800 border border-amber-100 animate-pulse'}`}>
                       {calculateDuration(shift.startTime, shift.endTime)}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm text-slate-500 truncate max-w-xs" title={shift.aiSummary || shift.notes}>
-                      {shift.aiSummary || shift.notes || <span className="text-slate-300 italic">Sin notas</span>}
+                  <td className="px-8 py-5">
+                    <p className="text-sm text-stone-500 truncate max-w-xs font-medium italic" title={shift.aiSummary || shift.notes}>
+                      {shift.aiSummary || shift.notes || '—'}
                     </p>
                   </td>
                 </tr>

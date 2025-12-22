@@ -18,29 +18,22 @@ const App: React.FC = () => {
   const [isRefreshingInsights, setIsRefreshingInsights] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
 
-  // Inicialización y carga de datos
   useEffect(() => {
     const savedUser = localStorage.getItem('authex_active_user');
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
       setAuthStatus('authenticated');
-      
       const savedShifts = localStorage.getItem(`authex_shifts_${parsedUser.id}`);
-      if (savedShifts) {
-        setShifts(JSON.parse(savedShifts));
-      }
+      if (savedShifts) setShifts(JSON.parse(savedShifts));
     } else {
       setAuthStatus('unauthenticated');
     }
   }, []);
 
-  // Persistencia de turnos por usuario
   useEffect(() => {
     if (user) {
       localStorage.setItem(`authex_shifts_${user.id}`, JSON.stringify(shifts));
-      
-      // Si el usuario es el activo, guardamos sus turnos también en una lista global para el admin (Simulación)
       const allGlobalShifts = JSON.parse(localStorage.getItem('authex_global_shifts') || '[]');
       const otherUserShifts = allGlobalShifts.filter((s: Shift) => s.userId !== user.id);
       localStorage.setItem('authex_global_shifts', JSON.stringify([...otherUserShifts, ...shifts]));
@@ -62,20 +55,16 @@ const App: React.FC = () => {
   }, [shifts, user]);
 
   useEffect(() => {
-    if (authStatus === 'authenticated') {
-      fetchInsights();
-    }
+    if (authStatus === 'authenticated') fetchInsights();
   }, [authStatus, fetchInsights]);
 
   const handleRegister = (newUser: User) => {
     const users = JSON.parse(localStorage.getItem('authex_all_users') || '[]');
     if (users.some((u: User) => u.email === newUser.email)) {
-      alert('Este email ya está registrado.');
-      return;
+      alert('Email ya registrado.'); return;
     }
     users.push(newUser);
     localStorage.setItem('authex_all_users', JSON.stringify(users));
-    
     setUser(newUser);
     localStorage.setItem('authex_active_user', JSON.stringify(newUser));
     setAuthStatus('authenticated');
@@ -89,11 +78,10 @@ const App: React.FC = () => {
       setUser(found);
       localStorage.setItem('authex_active_user', JSON.stringify(found));
       setAuthStatus('authenticated');
-      
       const savedShifts = localStorage.getItem(`authex_shifts_${found.id}`);
       setShifts(savedShifts ? JSON.parse(savedShifts) : []);
     } else {
-      alert('Email no encontrado. Por favor, regístrate.');
+      alert('No se encuentra el usuario.');
     }
   };
 
@@ -130,10 +118,10 @@ const App: React.FC = () => {
 
   if (authStatus === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-500 font-medium">Cargando AUTHEX S.A...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#fcfaf7]">
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-16 h-16 border-4 border-emerald-800 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-stone-600 font-bold tracking-widest uppercase text-xs">Authex S.A</p>
         </div>
       </div>
     );
@@ -144,9 +132,11 @@ const App: React.FC = () => {
       <Layout user={null} onLogout={() => {}}>
         <div className="max-w-md mx-auto mt-12 px-4">
           <div className="text-center mb-10">
-            <i className="fas fa-briefcase text-5xl text-indigo-600 mb-4"></i>
-            <h1 className="text-3xl font-bold text-slate-900">AUTHEX S.A</h1>
-            <p className="text-slate-500">Gestión de Presencia y Control Horario</p>
+            <div className="inline-block bg-emerald-800 p-4 rounded-3xl shadow-xl shadow-emerald-200/50 mb-6">
+              <i className="fas fa-seedling text-4xl text-white"></i>
+            </div>
+            <h1 className="text-3xl font-bold text-stone-900">AUTHEX S.A</h1>
+            <p className="text-stone-500 font-medium">Control de Presencia Consciente</p>
           </div>
           {showRegister ? (
             <RegisterForm onRegister={handleRegister} onSwitchToLogin={() => setShowRegister(false)} />
@@ -172,15 +162,16 @@ const App: React.FC = () => {
             />
             
             {insights && (
-              <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-6 text-white shadow-xl">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold flex items-center gap-2">
+              <div className="bg-gradient-to-br from-emerald-800 to-stone-800 rounded-3xl p-8 text-white shadow-2xl shadow-emerald-900/10 relative overflow-hidden">
+                <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
+                <div className="flex items-center justify-between mb-4 relative z-10">
+                  <h3 className="font-bold flex items-center gap-2 text-emerald-100">
                     <i className="fas fa-sparkles"></i>
-                    Análisis de IA
+                    Eco-Análisis IA
                   </h3>
-                  {isRefreshingInsights && <i className="fas fa-circle-notch fa-spin text-indigo-300"></i>}
+                  {isRefreshingInsights && <i className="fas fa-circle-notch fa-spin text-emerald-300"></i>}
                 </div>
-                <p className="text-indigo-50 text-sm leading-relaxed italic">
+                <p className="text-stone-100 text-sm leading-relaxed font-medium relative z-10">
                   "{insights}"
                 </p>
               </div>
@@ -191,33 +182,33 @@ const App: React.FC = () => {
             <StatisticsDashboard shifts={shifts} user={user!} />
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                  <i className="fas fa-calendar-alt"></i>
+              <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm flex items-center gap-4 transition-transform hover:scale-[1.02]">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-700">
+                  <i className="fas fa-calendar-check text-lg"></i>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase block">Jornadas</span>
-                  <div className="text-xl font-bold text-slate-900">{shifts.filter(s => s.endTime).length}</div>
+                  <span className="text-stone-400 text-[10px] font-bold uppercase block tracking-wider">Registros</span>
+                  <div className="text-2xl font-bold text-stone-900">{shifts.filter(s => s.endTime).length}</div>
                 </div>
               </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${activeShift ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-400'}`}>
-                  <i className="fas fa-user-clock"></i>
+              <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm flex items-center gap-4 transition-transform hover:scale-[1.02]">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${activeShift ? 'bg-amber-50 text-amber-700' : 'bg-stone-50 text-stone-400'}`}>
+                  <i className="fas fa-mountain text-lg"></i>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase block">Estado</span>
-                  <div className={`text-xl font-bold ${activeShift ? 'text-green-600' : 'text-slate-400'}`}>
-                    {activeShift ? 'Fichado' : 'Ausente'}
+                  <span className="text-stone-400 text-[10px] font-bold uppercase block tracking-wider">Estado</span>
+                  <div className={`text-2xl font-bold ${activeShift ? 'text-amber-700' : 'text-stone-400'}`}>
+                    {activeShift ? 'Activo' : 'Pausa'}
                   </div>
                 </div>
               </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-600">
-                  <i className="fas fa-door-open"></i>
+              <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm flex items-center gap-4 transition-transform hover:scale-[1.02]">
+                <div className="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center text-stone-600">
+                  <i className="fas fa-compass text-lg"></i>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase block">Últ. Salida</span>
-                  <div className="text-xl font-bold text-slate-900">
+                  <span className="text-stone-400 text-[10px] font-bold uppercase block tracking-wider">Últ. Pulso</span>
+                  <div className="text-2xl font-bold text-stone-900">
                     {shifts.find(s => s.endTime) ? new Date(shifts.find(s => s.endTime)!.endTime!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                   </div>
                 </div>
