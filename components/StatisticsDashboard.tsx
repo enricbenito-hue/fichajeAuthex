@@ -85,7 +85,7 @@ const StatisticsDashboard: React.FC<StatisticsDashboardProps> = ({ shifts, user 
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `Fichaje_AUTHEX_${user.name}.csv`;
+    link.download = `Fichaje_TOT_HERBA_${user.name}.csv`;
     link.click();
   };
 

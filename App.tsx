@@ -121,7 +121,7 @@ const App: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-[#fcfaf7]">
         <div className="flex flex-col items-center gap-6">
           <div className="w-16 h-16 border-4 border-emerald-800 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-stone-600 font-bold tracking-widest uppercase text-xs">Authex S.A</p>
+          <p className="text-stone-600 font-bold tracking-widest uppercase text-xs">AUTHEX S.A</p>
         </div>
       </div>
     );
@@ -130,13 +130,26 @@ const App: React.FC = () => {
   if (authStatus === 'unauthenticated') {
     return (
       <Layout user={null} onLogout={() => {}}>
-        <div className="max-w-md mx-auto mt-12 px-4">
-          <div className="text-center mb-10">
-            <div className="inline-block bg-emerald-800 p-4 rounded-3xl shadow-xl shadow-emerald-200/50 mb-6">
-              <i className="fas fa-seedling text-4xl text-white"></i>
+        <div className="max-w-md mx-auto mt-4 px-4 animate-in">
+          <div className="text-center mb-10 flex flex-col items-center">
+            {/* Contenedor del Logotipo de TOT HERBA usando la imagen proporcionada */}
+            <div className="bg-white p-4 rounded-3xl shadow-sm mb-6 max-w-[280px]">
+              <img 
+                src="https://raw.githubusercontent.com/totherba/branding/main/logo.png" 
+                alt="TOT HERBA - Cosmética Natural" 
+                className="w-full h-auto object-contain"
+                onError={(e) => {
+                  // Fallback visual si la URL no está disponible inmediatamente
+                  e.currentTarget.parentElement!.innerHTML = `
+                    <div class="flex flex-col items-center py-4">
+                      <div class="text-[#3d6b67] text-5xl font-bold tracking-tighter leading-none">TOT</div>
+                      <div class="text-[#3d6b67] text-5xl font-bold tracking-tighter leading-none mb-2">HERBA</div>
+                      <div class="text-[#3d6b67] text-lg font-medium">Cosmética Natural</div>
+                    </div>
+                  `;
+                }}
+              />
             </div>
-            <h1 className="text-3xl font-bold text-stone-900">AUTHEX S.A</h1>
-            <p className="text-stone-500 font-medium">Control de Presencia Consciente</p>
           </div>
           {showRegister ? (
             <RegisterForm onRegister={handleRegister} onSwitchToLogin={() => setShowRegister(false)} />

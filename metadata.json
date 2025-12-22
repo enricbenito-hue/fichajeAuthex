@@ -1,11 +1,11 @@
 {
-  "name": "Fichaje AUTHEX S.A",
+  "name": "Control Horario AUTHEX S.A",
   "short_name": "AUTHEX",
-  "description": "Sistema profesional de control horario y gestión de presencia de AUTHEX S.A.",
+  "description": "Sistema profesional de control horario para TOT HERBA, por AUTHEX S.A.",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#4f46e5",
-  "theme_color": "#4f46e5",
+  "background_color": "#065f46",
+  "theme_color": "#065f46",
   "requestFramePermissions": [
     "geolocation"
   ]

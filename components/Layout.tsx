@@ -17,8 +17,8 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
             <div className="bg-emerald-800 p-2 rounded-xl shadow-sm">
               <i className="fas fa-leaf text-white text-lg"></i>
             </div>
-            <h1 className="text-xl font-bold text-stone-900 tracking-tight">
-              AUTHEX<span className="text-emerald-700"> S.A</span>
+            <h1 className="text-xl font-bold text-stone-900 tracking-tight uppercase">
+              AUTHEX<span className="text-emerald-700 ml-1 text-sm font-black">S.A</span>
             </h1>
           </div>
           
@@ -47,7 +47,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
       <footer className="bg-stone-100 border-t border-stone-200 py-8 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-sm text-stone-500 font-medium">
-            &copy; {new Date().getFullYear()} AUTHEX S.A. Gestión natural del tiempo.
+            &copy; {new Date().getFullYear()} AUTHEX S.A. Gestión del tiempo para TOT HERBA.
           </p>
         </div>
       </footer>

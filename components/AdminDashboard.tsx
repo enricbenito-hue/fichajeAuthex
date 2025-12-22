@@ -84,7 +84,7 @@ const AdminDashboard: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold text-stone-900 tracking-tight">Gestión de Ecosistema</h2>
-          <p className="text-stone-500 font-medium">Supervisión y armonización de la plantilla de AUTHEX S.A</p>
+          <p className="text-stone-500 font-medium">Supervisión y armonización de la plantilla de TOT HERBA</p>
         </div>
         <button 
           onClick={openAddModal}
