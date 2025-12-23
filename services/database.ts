@@ -3,40 +3,60 @@ import { User, Shift } from '../types';
 
 export const db = {
   async _fetchData(): Promise<{ users: User[], shifts: Shift[] }> {
-    console.log("[DB] Iniciando fetch de datos desde /api/data...");
+    console.log("[DB] ——— Iniciando petición a /api/data ———");
     try {
-      const res = await fetch('/api/data', { cache: 'no-store' });
+      const res = await fetch('/api/data', { 
+        method: 'GET',
+        cache: 'no-store',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
       if (!res.ok) {
         const errorText = await res.text();
+        console.error(`[DB] Respuesta del servidor no OK (${res.status}):`, errorText);
         throw new Error(`Error ${res.status}: ${errorText || 'Fallo en la respuesta'}`);
       }
+      
       const data = await res.json();
-      console.log("[DB] Datos recibidos con éxito:", { users: data.users?.length, shifts: data.shifts?.length });
+      console.log("[DB] Datos recuperados:", { 
+        usuarios: data.users?.length || 0, 
+        registros: data.shifts?.length || 0 
+      });
+      
       return {
         users: data.users || [],
         shifts: data.shifts || []
       };
     } catch (e) {
-      console.error("[DB] Error crítico al recuperar datos:", e);
+      console.error("[DB] Error en _fetchData:", e);
+      // Devolvemos una estructura básica para no romper la app
       return { users: [], shifts: [] };
     }
   },
 
   async _saveData(data: { users: User[], shifts: Shift[] }): Promise<void> {
-    console.log("[DB] Intentando guardar cambios en la nube...");
+    console.log("[DB] ——— Guardando cambios en la nube ———");
     try {
       const res = await fetch('/api/data', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(data),
       });
+      
       if (!res.ok) {
         const errorText = await res.text();
+        console.error("[DB] Error al guardar en servidor:", errorText);
         throw new Error(`Error ${res.status}: ${errorText || 'Fallo al guardar'}`);
       }
-      console.log("[DB] Cambios guardados correctamente.");
+      
+      console.log("[DB] Persistencia completada correctamente.");
     } catch (e) {
-      console.error("[DB] Error al persistir datos:", e);
+      console.error("[DB] Error en _saveData:", e);
       throw e;
     }
   },
