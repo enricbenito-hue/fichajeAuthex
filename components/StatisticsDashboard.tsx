@@ -1,6 +1,10 @@
 
 import React, { useEffect, useRef, useMemo } from 'react';
 import { Shift, User } from '../types';
+import { Chart, registerables } from 'chart.js';
+
+// Registramos todos los componentes necesarios de Chart.js para la versión 4
+Chart.register(...registerables);
 
 interface StatisticsDashboardProps {
   shifts: Shift[];
@@ -9,7 +13,7 @@ interface StatisticsDashboardProps {
 
 const StatisticsDashboard: React.FC<StatisticsDashboardProps> = ({ shifts, user }) => {
   const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<any>(null);
+  const chartInstance = useRef<Chart | null>(null);
 
   const stats = useMemo(() => {
     const completedShifts = shifts.filter(s => s.endTime);
@@ -42,11 +46,13 @@ const StatisticsDashboard: React.FC<StatisticsDashboardProps> = ({ shifts, user 
 
   useEffect(() => {
     if (chartRef.current) {
-      if (chartInstance.current) chartInstance.current.destroy();
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+      }
+      
       const ctx = chartRef.current.getContext('2d');
       if (ctx) {
-        // @ts-ignore
-        chartInstance.current = new window.Chart(ctx, {
+        chartInstance.current = new Chart(ctx, {
           type: 'bar',
           data: {
             labels: stats.dailyLabels,
@@ -62,15 +68,38 @@ const StatisticsDashboard: React.FC<StatisticsDashboardProps> = ({ shifts, user 
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: { 
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#1c1917',
+                titleFont: { size: 12, weight: 'bold' },
+                bodyFont: { size: 12 },
+                padding: 12,
+                cornerRadius: 12,
+                displayColors: false
+              }
+            },
             scales: {
-              y: { beginAtZero: true, grid: { display: false }, ticks: { color: '#a8a29e' } },
-              x: { grid: { display: false }, ticks: { color: '#78716c' } }
+              y: { 
+                beginAtZero: true, 
+                grid: { display: false }, 
+                ticks: { color: '#a8a29e', font: { size: 10, weight: 'bold' } } 
+              },
+              x: { 
+                grid: { display: false }, 
+                ticks: { color: '#78716c', font: { size: 10, weight: 'bold' } } 
+              }
             }
           }
         });
       }
     }
+    
+    return () => {
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+      }
+    };
   }, [stats]);
 
   const exportToCSV = () => {
