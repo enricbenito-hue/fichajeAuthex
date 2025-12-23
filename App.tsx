@@ -11,6 +11,14 @@ import AdminDashboard from './components/AdminDashboard';
 import { getWeeklyInsights } from './services/geminiService';
 import { db } from './services/database';
 
+// Fallback para entornos sin crypto.randomUUID (como HTTP local)
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
@@ -18,15 +26,16 @@ const App: React.FC = () => {
   const [insights, setInsights] = useState<string>('');
   const [isRefreshingInsights, setIsRefreshingInsights] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     const initAuth = async () => {
+      console.log("[App] Iniciando verificación de sesión...");
       const savedUserStr = localStorage.getItem('authex_active_user');
       if (savedUserStr) {
         try {
           const parsedUser = JSON.parse(savedUserStr);
-          // Verificamos si el usuario aún existe en la DB centralizada
           const allUsers = await db.getAllUsers();
           const exists = allUsers.find(u => u.id === parsedUser.id);
           
@@ -35,10 +44,13 @@ const App: React.FC = () => {
             const userShifts = await db.getUserShifts(exists.id);
             setShifts(userShifts);
             setAuthStatus('authenticated');
+            console.log("[App] Sesión recuperada para:", exists.email);
           } else {
+            console.warn("[App] Usuario guardado ya no existe en la base de datos.");
             handleLogout();
           }
         } catch (e) {
+          console.error("[App] Error al recuperar sesión:", e);
           handleLogout();
         }
       } else {
@@ -67,37 +79,58 @@ const App: React.FC = () => {
     if (authStatus === 'authenticated') fetchInsights();
   }, [authStatus, fetchInsights]);
 
-  const handleRegister = async (newUser: User) => {
+  const handleRegister = async (userData: Omit<User, 'id' | 'createdAt'>) => {
+    console.log("[App] Intentando registro de:", userData.email);
+    setIsAuthLoading(true);
     try {
       const users = await db.getAllUsers();
-      if (users.some((u: User) => u.email === newUser.email)) {
-        alert('Este email ya está registrado.'); return;
+      if (users.some((u: User) => u.email === userData.email)) {
+        alert('Este email ya está registrado.');
+        setIsAuthLoading(false);
+        return;
       }
+      
+      const newUser: User = {
+        ...userData,
+        id: generateId(),
+        createdAt: new Date().toISOString()
+      };
+      
       await db.saveUser(newUser);
       setUser(newUser);
       localStorage.setItem('authex_active_user', JSON.stringify(newUser));
       setAuthStatus('authenticated');
       setShifts([]);
+      console.log("[App] Registro completado.");
     } catch (e) {
-      alert('Error al registrarse. Inténtalo de nuevo.');
+      console.error("[App] Fallo en el registro:", e);
+      alert('Error al registrarse. Revisa la conexión con la nube.');
+    } finally {
+      setIsAuthLoading(false);
     }
   };
 
   const handleLogin = async (email: string) => {
+    console.log("[App] Intentando login con:", email);
+    setIsAuthLoading(true);
     try {
       const users = await db.getAllUsers();
-      const found = users.find((u: User) => u.email === email);
+      const found = users.find((u: User) => u.email.toLowerCase() === email.toLowerCase());
       if (found) {
         setUser(found);
         localStorage.setItem('authex_active_user', JSON.stringify(found));
         const userShifts = await db.getUserShifts(found.id);
         setShifts(userShifts);
         setAuthStatus('authenticated');
+        console.log("[App] Login exitoso.");
       } else {
-        alert('Usuario no encontrado. Por favor, regístrate.');
+        alert('Usuario no encontrado. Por favor, regístrate primero.');
       }
     } catch (e) {
-      alert('Error al conectar con la base de datos.');
+      console.error("[App] Fallo en el login:", e);
+      alert('Error de conexión con la base de datos.');
+    } finally {
+      setIsAuthLoading(false);
     }
   };
 
@@ -114,7 +147,7 @@ const App: React.FC = () => {
   const handleClockIn = async (location?: { latitude: number; longitude: number }) => {
     if (!user) return;
     const newShift: Shift = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       userId: user.id,
       startTime: new Date().toISOString(),
       startLocation: location,
@@ -153,7 +186,6 @@ const App: React.FC = () => {
       <Layout user={null} onLogout={() => {}}>
         <div className="max-w-md mx-auto mt-24 px-4 animate-in">
           <div className="text-center mb-16 flex flex-col items-center">
-            {/* Logo mantenido: Fuente light, pequeña y elegante */}
             <div className="flex items-center mb-4">
                <h1 className="text-3xl font-light text-emerald-900 tracking-[0.3em] uppercase flex items-baseline">
                  TOT<span className="ml-3 text-stone-400 font-thin">HERBA</span>
@@ -162,9 +194,17 @@ const App: React.FC = () => {
             <div className="w-16 h-[1px] bg-stone-200"></div>
           </div>
           {showRegister ? (
-            <RegisterForm onRegister={handleRegister} onSwitchToLogin={() => setShowRegister(false)} />
+            <RegisterForm 
+              onRegister={handleRegister} 
+              onSwitchToLogin={() => setShowRegister(false)} 
+              isLoading={isAuthLoading} 
+            />
           ) : (
-            <LoginForm onLogin={handleLogin} onSwitchToRegister={() => setShowRegister(true)} />
+            <LoginForm 
+              onLogin={handleLogin} 
+              onSwitchToRegister={() => setShowRegister(true)} 
+              isLoading={isAuthLoading} 
+            />
           )}
         </div>
       </Layout>

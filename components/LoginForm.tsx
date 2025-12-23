@@ -4,14 +4,15 @@ import React, { useState } from 'react';
 interface LoginFormProps {
   onLogin: (email: string) => void;
   onSwitchToRegister: () => void;
+  isLoading?: boolean;
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onSwitchToRegister }) => {
+const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onSwitchToRegister, isLoading = false }) => {
   const [email, setEmail] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) onLogin(email);
+    if (email && !isLoading) onLogin(email);
   };
 
   return (
@@ -27,24 +28,37 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onSwitchToRegister }) =>
           <input
             type="email"
             required
+            disabled={isLoading}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-5 py-4 rounded-2xl bg-stone-50 border-none focus:ring-2 focus:ring-emerald-800 outline-none transition-all text-stone-800"
+            className="w-full px-5 py-4 rounded-2xl bg-stone-50 border-none focus:ring-2 focus:ring-emerald-800 outline-none transition-all text-stone-800 disabled:opacity-50"
             placeholder="ejemplo@authex.com"
           />
         </div>
         <button
           type="submit"
-          className="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 shadow-xl shadow-emerald-900/10 mt-2"
+          disabled={isLoading}
+          className="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 shadow-xl shadow-emerald-900/10 mt-2 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          Entrar en el sistema
+          {isLoading ? (
+            <>
+              <i className="fas fa-circle-notch fa-spin"></i>
+              Verificando...
+            </>
+          ) : (
+            'Entrar en el sistema'
+          )}
         </button>
       </form>
 
       <div className="mt-8 text-center pt-8 border-t border-stone-50">
         <p className="text-sm text-stone-500 font-medium">
           ¿No tienes cuenta?{' '}
-          <button onClick={onSwitchToRegister} className="text-emerald-800 font-bold hover:underline ml-1">
+          <button 
+            onClick={onSwitchToRegister} 
+            disabled={isLoading}
+            className="text-emerald-800 font-bold hover:underline ml-1 disabled:opacity-50"
+          >
             Regístrate
           </button>
         </p>

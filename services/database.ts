@@ -1,34 +1,46 @@
 
 import { User, Shift } from '../types';
 
-// Ahora este servicio consume nuestra API Serverless que gestiona Vercel Blob
 export const db = {
   async _fetchData(): Promise<{ users: User[], shifts: Shift[] }> {
+    console.log("[DB] Iniciando fetch de datos desde /api/data...");
     try {
-      const res = await fetch('/api/data');
-      if (!res.ok) throw new Error('Error al cargar datos');
-      return await res.json();
+      const res = await fetch('/api/data', { cache: 'no-store' });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Error ${res.status}: ${errorText || 'Fallo en la respuesta'}`);
+      }
+      const data = await res.json();
+      console.log("[DB] Datos recibidos con éxito:", { users: data.users?.length, shifts: data.shifts?.length });
+      return {
+        users: data.users || [],
+        shifts: data.shifts || []
+      };
     } catch (e) {
-      console.error("Database fetch error:", e);
+      console.error("[DB] Error crítico al recuperar datos:", e);
       return { users: [], shifts: [] };
     }
   },
 
   async _saveData(data: { users: User[], shifts: Shift[] }): Promise<void> {
+    console.log("[DB] Intentando guardar cambios en la nube...");
     try {
       const res = await fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('Error al guardar datos');
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Error ${res.status}: ${errorText || 'Fallo al guardar'}`);
+      }
+      console.log("[DB] Cambios guardados correctamente.");
     } catch (e) {
-      console.error("Database save error:", e);
+      console.error("[DB] Error al persistir datos:", e);
       throw e;
     }
   },
 
-  // --- USUARIOS ---
   async getAllUsers(): Promise<User[]> {
     const { users } = await this._fetchData();
     return users;
@@ -48,12 +60,10 @@ export const db = {
   async deleteUser(userId: string): Promise<void> {
     const data = await this._fetchData();
     data.users = data.users.filter(u => u.id !== userId);
-    // También limpiamos sus turnos por integridad
     data.shifts = data.shifts.filter(s => s.userId !== userId);
     await this._saveData(data);
   },
 
-  // --- TURNOS (SHIFTS) ---
   async getUserShifts(userId: string): Promise<Shift[]> {
     const { shifts } = await this._fetchData();
     return shifts.filter(s => s.userId === userId);

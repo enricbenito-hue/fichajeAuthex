@@ -3,24 +3,23 @@ import React, { useState } from 'react';
 import { User } from '../types';
 
 interface RegisterFormProps {
-  onRegister: (user: User) => void;
+  onRegister: (user: Omit<User, 'id' | 'createdAt'>) => void;
   onSwitchToLogin: () => void;
+  isLoading?: boolean;
 }
 
-const RegisterForm: React.FC<RegisterFormProps> = ({ onRegister, onSwitchToLogin }) => {
+const RegisterForm: React.FC<RegisterFormProps> = ({ onRegister, onSwitchToLogin, isLoading = false }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'employee' | 'admin'>('employee');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name && email) {
+    if (name && email && !isLoading) {
       onRegister({
-        id: crypto.randomUUID(),
         name,
         email,
-        role,
-        createdAt: new Date().toISOString()
+        role
       });
     }
   };
@@ -38,9 +37,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegister, onSwitchToLogin
           <input
             type="text"
             required
+            disabled={isLoading}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-5 py-4 rounded-2xl bg-stone-50 border-none focus:ring-2 focus:ring-emerald-800 outline-none transition-all text-stone-800"
+            className="w-full px-5 py-4 rounded-2xl bg-stone-50 border-none focus:ring-2 focus:ring-emerald-800 outline-none transition-all text-stone-800 disabled:opacity-50"
             placeholder="Ej: Manuel García"
           />
         </div>
@@ -49,9 +49,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegister, onSwitchToLogin
           <input
             type="email"
             required
+            disabled={isLoading}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-5 py-4 rounded-2xl bg-stone-50 border-none focus:ring-2 focus:ring-emerald-800 outline-none transition-all text-stone-800"
+            className="w-full px-5 py-4 rounded-2xl bg-stone-50 border-none focus:ring-2 focus:ring-emerald-800 outline-none transition-all text-stone-800 disabled:opacity-50"
             placeholder="m.garcia@authex.com"
           />
         </div>
@@ -60,15 +61,17 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegister, onSwitchToLogin
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
+              disabled={isLoading}
               onClick={() => setRole('employee')}
-              className={`py-4 rounded-2xl border text-sm font-bold transition-all flex items-center justify-center gap-2 ${role === 'employee' ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm' : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'}`}
+              className={`py-4 rounded-2xl border text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${role === 'employee' ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm' : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'}`}
             >
               <i className="fas fa-user-tie"></i> Empleado
             </button>
             <button
               type="button"
+              disabled={isLoading}
               onClick={() => setRole('admin')}
-              className={`py-4 rounded-2xl border text-sm font-bold transition-all flex items-center justify-center gap-2 ${role === 'admin' ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm' : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'}`}
+              className={`py-4 rounded-2xl border text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${role === 'admin' ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm' : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'}`}
             >
               <i className="fas fa-shield-halved"></i> Admin
             </button>
@@ -76,16 +79,28 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegister, onSwitchToLogin
         </div>
         <button
           type="submit"
-          className="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 shadow-xl shadow-emerald-900/10 mt-4"
+          disabled={isLoading}
+          className="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 shadow-xl shadow-emerald-900/10 mt-4 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          Crear cuenta
+          {isLoading ? (
+            <>
+              <i className="fas fa-circle-notch fa-spin"></i>
+              Creando cuenta...
+            </>
+          ) : (
+            'Crear cuenta'
+          )}
         </button>
       </form>
 
       <div className="mt-8 text-center pt-8 border-t border-stone-50">
         <p className="text-sm text-stone-500 font-medium">
           ¿Ya tienes cuenta?{' '}
-          <button onClick={onSwitchToLogin} className="text-emerald-800 font-bold hover:underline ml-1">
+          <button 
+            onClick={onSwitchToLogin} 
+            disabled={isLoading}
+            className="text-emerald-800 font-bold hover:underline ml-1 disabled:opacity-50"
+          >
             Entrar aquí
           </button>
         </p>
