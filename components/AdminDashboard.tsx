@@ -44,6 +44,56 @@ const AdminDashboard: React.FC = () => {
       );
   }, [allUsers, globalShifts, searchTerm]);
 
+  const exportGlobalReport = () => {
+    const now = new Date();
+    
+    // Inicio de Hoy
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    
+    // Inicio de Semana (Lunes)
+    const startOfWeek = new Date();
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    // Inicio de Mes
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const headers = ["Nombre", "Email", "Rol", "Horas Hoy", "Horas Semana", "Horas Mes", "Horas Totales"];
+    
+    const rows = allUsers.map(u => {
+      const userShifts = globalShifts.filter(s => s.userId === u.id && s.endTime);
+      
+      const sumHours = (filterFn: (d: Date) => boolean) => {
+        return userShifts
+          .filter(s => filterFn(new Date(s.startTime)))
+          .reduce((acc, s) => acc + (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 3600000, 0)
+          .toFixed(2);
+      };
+
+      return [
+        u.name,
+        u.email,
+        u.role === 'admin' ? 'Administrador' : 'Empleado',
+        sumHours(d => d >= startOfToday),
+        sumHours(d => d >= startOfWeek),
+        sumHours(d => d >= startOfMonth),
+        sumHours(() => true)
+      ];
+    });
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    // BOM para compatibilidad con Excel en español
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Reporte_RRHH_TOT_HERBA_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
   const handleCopyEmail = (email: string) => {
     navigator.clipboard.writeText(email);
     setCopyFeedback(email);
@@ -102,13 +152,22 @@ const AdminDashboard: React.FC = () => {
           <h2 className="text-3xl font-bold text-stone-900 tracking-tight">Gestión de Ecosistema</h2>
           <p className="text-stone-500 font-medium">Supervisión y armonización de la plantilla de TOT HERBA</p>
         </div>
-        <button 
-          onClick={openAddModal}
-          className="bg-emerald-800 hover:bg-emerald-900 text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-emerald-900/20 transition-all flex items-center gap-2"
-        >
-          <i className="fas fa-plus"></i>
-          Nuevo Miembro
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={exportGlobalReport}
+            className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2 border border-stone-200"
+          >
+            <i className="fas fa-file-excel"></i>
+            Descargar Reporte Global
+          </button>
+          <button 
+            onClick={openAddModal}
+            className="bg-emerald-800 hover:bg-emerald-900 text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-emerald-900/20 transition-all flex items-center gap-2"
+          >
+            <i className="fas fa-plus"></i>
+            Nuevo Miembro
+          </button>
+        </div>
       </div>
 
       {isModalOpen && (
