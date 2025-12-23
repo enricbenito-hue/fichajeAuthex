@@ -1,11 +1,13 @@
 
-import { put, list, head } from '@vercel/blob';
+import { put, list } from '@vercel/blob';
 
 // Nombre del archivo de base de datos en el storage
 const DB_FILENAME = 'authex_db_v1.json';
 
+// Cambiamos a runtime 'nodejs' porque 'edge' no soporta las dependencias de stream/net 
+// que utiliza internamente el SDK de @vercel/blob
 export const config = {
-  runtime: 'edge',
+  runtime: 'nodejs',
 };
 
 export default async function handler(req: Request) {
@@ -29,6 +31,7 @@ export default async function handler(req: Request) {
         headers: { 'content-type': 'application/json' },
       });
     } catch (error) {
+      console.error("Error en GET /api/data:", error);
       return new Response(JSON.stringify({ error: 'Failed to fetch data' }), { status: 500 });
     }
   }
@@ -37,8 +40,10 @@ export default async function handler(req: Request) {
   if (req.method === 'POST') {
     try {
       const newData = await req.json();
+      
       // El método put de Vercel Blob sobrescribirá el archivo si usamos el mismo pathname
-      // y configuramos addRandomSuffix: false
+      // y configuramos addRandomSuffix: false. 
+      // Importante: Esto requiere que el BLOB_READ_WRITE_TOKEN esté configurado en Vercel.
       const { url } = await put(DB_FILENAME, JSON.stringify(newData), {
         access: 'public',
         addRandomSuffix: false,
@@ -49,6 +54,7 @@ export default async function handler(req: Request) {
         headers: { 'content-type': 'application/json' },
       });
     } catch (error) {
+      console.error("Error en POST /api/data:", error);
       return new Response(JSON.stringify({ error: 'Failed to save data' }), { status: 500 });
     }
   }
