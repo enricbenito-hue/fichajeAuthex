@@ -130,15 +130,15 @@ const App: React.FC = () => {
   if (authStatus === 'unauthenticated') {
     return (
       <Layout user={null} onLogout={() => {}}>
-        <div className="max-w-md mx-auto mt-20 px-4 animate-in">
+        <div className="max-w-md mx-auto mt-24 px-4 animate-in">
           <div className="text-center mb-16 flex flex-col items-center">
-            {/* Logotipo Minimalista: Tipografía Extra Fina y Espaciada */}
-            <div className="flex items-center mb-6">
-               <h1 className="text-5xl font-extralight text-emerald-900 tracking-[0.25em] uppercase flex items-baseline">
-                 TOT<span className="ml-4 text-stone-400 font-thin">HERBA</span>
+            {/* Logotipo Minimalista: Fuente Light, más pequeña y espaciada */}
+            <div className="flex items-center mb-4">
+               <h1 className="text-3xl font-light text-emerald-900 tracking-[0.3em] uppercase flex items-baseline">
+                 TOT<span className="ml-3 text-stone-400 font-thin">HERBA</span>
                </h1>
             </div>
-            <div className="w-24 h-[1px] bg-stone-200"></div>
+            <div className="w-16 h-[1px] bg-stone-200"></div>
           </div>
           {showRegister ? (
             <RegisterForm onRegister={handleRegister} onSwitchToLogin={() => setShowRegister(false)} />
