@@ -40,12 +40,16 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: 'Body missing' });
       }
 
+      // IMPORTANTE: addRandomSuffix: false + allowOverwrite: true 
+      // permite que el archivo funcione como una base de datos de un solo archivo.
       const { url } = await put(DB_FILENAME, JSON.stringify(newData), {
         access: 'public',
         addRandomSuffix: false,
+        allowOverwrite: true,
+        contentType: 'application/json',
       });
 
-      console.log("[API] Datos guardados con éxito en:", url);
+      console.log("[API] Datos actualizados con éxito en:", url);
       return res.status(200).json({ success: true, url });
     } catch (error: any) {
       console.error("Error en POST /api/data:", error);
