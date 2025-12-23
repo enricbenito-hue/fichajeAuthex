@@ -9,6 +9,7 @@ import LoginForm from './components/LoginForm';
 import StatisticsDashboard from './components/StatisticsDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import { getWeeklyInsights } from './services/geminiService';
+import { db } from './services/database';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -17,28 +18,36 @@ const App: React.FC = () => {
   const [insights, setInsights] = useState<string>('');
   const [isRefreshingInsights, setIsRefreshingInsights] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('authex_active_user');
-    if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      setUser(parsedUser);
-      setAuthStatus('authenticated');
-      const savedShifts = localStorage.getItem(`authex_shifts_${parsedUser.id}`);
-      if (savedShifts) setShifts(JSON.parse(savedShifts));
-    } else {
-      setAuthStatus('unauthenticated');
-    }
+    const initAuth = async () => {
+      const savedUserStr = localStorage.getItem('authex_active_user');
+      if (savedUserStr) {
+        try {
+          const parsedUser = JSON.parse(savedUserStr);
+          // Verificamos si el usuario aún existe en la DB centralizada
+          const allUsers = await db.getAllUsers();
+          const exists = allUsers.find(u => u.id === parsedUser.id);
+          
+          if (exists) {
+            setUser(exists);
+            const userShifts = await db.getUserShifts(exists.id);
+            setShifts(userShifts);
+            setAuthStatus('authenticated');
+          } else {
+            handleLogout();
+          }
+        } catch (e) {
+          handleLogout();
+        }
+      } else {
+        setAuthStatus('unauthenticated');
+      }
+      setIsInitialLoad(false);
+    };
+    initAuth();
   }, []);
-
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem(`authex_shifts_${user.id}`, JSON.stringify(shifts));
-      const allGlobalShifts = JSON.parse(localStorage.getItem('authex_global_shifts') || '[]');
-      const otherUserShifts = allGlobalShifts.filter((s: Shift) => s.userId !== user.id);
-      localStorage.setItem('authex_global_shifts', JSON.stringify([...otherUserShifts, ...shifts]));
-    }
-  }, [shifts, user]);
 
   const fetchInsights = useCallback(async () => {
     if (shifts.length > 0 && user && user.role === 'employee') {
@@ -58,30 +67,37 @@ const App: React.FC = () => {
     if (authStatus === 'authenticated') fetchInsights();
   }, [authStatus, fetchInsights]);
 
-  const handleRegister = (newUser: User) => {
-    const users = JSON.parse(localStorage.getItem('authex_all_users') || '[]');
-    if (users.some((u: User) => u.email === newUser.email)) {
-      alert('Email ya registrado.'); return;
+  const handleRegister = async (newUser: User) => {
+    try {
+      const users = await db.getAllUsers();
+      if (users.some((u: User) => u.email === newUser.email)) {
+        alert('Este email ya está registrado.'); return;
+      }
+      await db.saveUser(newUser);
+      setUser(newUser);
+      localStorage.setItem('authex_active_user', JSON.stringify(newUser));
+      setAuthStatus('authenticated');
+      setShifts([]);
+    } catch (e) {
+      alert('Error al registrarse. Inténtalo de nuevo.');
     }
-    users.push(newUser);
-    localStorage.setItem('authex_all_users', JSON.stringify(users));
-    setUser(newUser);
-    localStorage.setItem('authex_active_user', JSON.stringify(newUser));
-    setAuthStatus('authenticated');
-    setShifts([]);
   };
 
-  const handleLogin = (email: string) => {
-    const users = JSON.parse(localStorage.getItem('authex_all_users') || '[]');
-    const found = users.find((u: User) => u.email === email);
-    if (found) {
-      setUser(found);
-      localStorage.setItem('authex_active_user', JSON.stringify(found));
-      setAuthStatus('authenticated');
-      const savedShifts = localStorage.getItem(`authex_shifts_${found.id}`);
-      setShifts(savedShifts ? JSON.parse(savedShifts) : []);
-    } else {
-      alert('No se encuentra el usuario.');
+  const handleLogin = async (email: string) => {
+    try {
+      const users = await db.getAllUsers();
+      const found = users.find((u: User) => u.email === email);
+      if (found) {
+        setUser(found);
+        localStorage.setItem('authex_active_user', JSON.stringify(found));
+        const userShifts = await db.getUserShifts(found.id);
+        setShifts(userShifts);
+        setAuthStatus('authenticated');
+      } else {
+        alert('Usuario no encontrado. Por favor, regístrate.');
+      }
+    } catch (e) {
+      alert('Error al conectar con la base de datos.');
     }
   };
 
@@ -95,7 +111,7 @@ const App: React.FC = () => {
 
   const activeShift = shifts.find(s => !s.endTime) || null;
 
-  const handleClockIn = (location?: { latitude: number; longitude: number }) => {
+  const handleClockIn = async (location?: { latitude: number; longitude: number }) => {
     if (!user) return;
     const newShift: Shift = {
       id: crypto.randomUUID(),
@@ -103,25 +119,30 @@ const App: React.FC = () => {
       startTime: new Date().toISOString(),
       startLocation: location,
     };
+    await db.saveShift(newShift);
     setShifts(prev => [...prev, newShift]);
   };
 
-  const handleClockOut = (notes: string, aiSummary: string, location?: { latitude: number; longitude: number }) => {
+  const handleClockOut = async (notes: string, aiSummary: string, location?: { latitude: number; longitude: number }) => {
     if (!activeShift) return;
-    setShifts(prev => prev.map(s => 
-      s.id === activeShift.id 
-        ? { ...s, endTime: new Date().toISOString(), notes, aiSummary, endLocation: location } 
-        : s
-    ));
+    const updatedShift = { 
+      ...activeShift, 
+      endTime: new Date().toISOString(), 
+      notes, 
+      aiSummary, 
+      endLocation: location 
+    };
+    await db.saveShift(updatedShift);
+    setShifts(prev => prev.map(s => s.id === activeShift.id ? updatedShift : s));
     setTimeout(fetchInsights, 1000);
   };
 
-  if (authStatus === 'loading') {
+  if (authStatus === 'loading' || isInitialLoad) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fcfaf7]">
         <div className="flex flex-col items-center gap-6">
-          <div className="w-16 h-16 border-4 border-emerald-800 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-stone-600 font-bold tracking-widest uppercase text-xs">AUTHEX S.A</p>
+          <div className="w-10 h-10 border-2 border-emerald-800 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-stone-400 font-light tracking-[0.3em] uppercase text-[10px]">Sincronizando con la nube...</p>
         </div>
       </div>
     );
@@ -132,7 +153,7 @@ const App: React.FC = () => {
       <Layout user={null} onLogout={() => {}}>
         <div className="max-w-md mx-auto mt-24 px-4 animate-in">
           <div className="text-center mb-16 flex flex-col items-center">
-            {/* Logotipo Minimalista: Fuente Light, más pequeña y espaciada */}
+            {/* Logo mantenido: Fuente light, pequeña y elegante */}
             <div className="flex items-center mb-4">
                <h1 className="text-3xl font-light text-emerald-900 tracking-[0.3em] uppercase flex items-baseline">
                  TOT<span className="ml-3 text-stone-400 font-thin">HERBA</span>
@@ -164,7 +185,7 @@ const App: React.FC = () => {
             />
             
             {insights && (
-              <div className="bg-gradient-to-br from-emerald-800 to-stone-800 rounded-3xl p-8 text-white shadow-2xl shadow-emerald-900/10 relative overflow-hidden">
+              <div className="bg-gradient-to-br from-emerald-800 to-stone-800 rounded-3xl p-8 text-white shadow-2xl shadow-emerald-900/10 relative overflow-hidden animate-in">
                 <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
                 <div className="flex items-center justify-between mb-4 relative z-10">
                   <h3 className="font-bold flex items-center gap-2 text-emerald-100">
@@ -184,7 +205,7 @@ const App: React.FC = () => {
             <StatisticsDashboard shifts={shifts} user={user!} />
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm flex items-center gap-4 transition-transform hover:scale-[1.02]">
+              <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-700">
                   <i className="fas fa-calendar-check text-lg"></i>
                 </div>
@@ -193,7 +214,7 @@ const App: React.FC = () => {
                   <div className="text-2xl font-bold text-stone-900">{shifts.filter(s => s.endTime).length}</div>
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm flex items-center gap-4 transition-transform hover:scale-[1.02]">
+              <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${activeShift ? 'bg-amber-50 text-amber-700' : 'bg-stone-50 text-stone-400'}`}>
                   <i className="fas fa-mountain text-lg"></i>
                 </div>
@@ -204,14 +225,14 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm flex items-center gap-4 transition-transform hover:scale-[1.02]">
+              <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
                 <div className="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center text-stone-600">
                   <i className="fas fa-compass text-lg"></i>
                 </div>
                 <div>
                   <span className="text-stone-400 text-[10px] font-bold uppercase block tracking-wider">Últ. Pulso</span>
                   <div className="text-2xl font-bold text-stone-900">
-                    {shifts.find(s => s.endTime) ? new Date(shifts.find(s => s.endTime)!.endTime!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                    {shifts.find(s => s.endTime) ? new Date([...shifts].filter(s => s.endTime).sort((a,b) => new Date(b.endTime!).getTime() - new Date(a.endTime!).getTime())[0].endTime!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                   </div>
                 </div>
               </div>
