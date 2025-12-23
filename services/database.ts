@@ -13,25 +13,30 @@ export const db = {
         }
       });
       
+      const contentType = res.headers.get("content-type");
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`[DB] Respuesta del servidor no OK (${res.status}):`, errorText);
-        throw new Error(`Error ${res.status}: ${errorText || 'Fallo en la respuesta'}`);
+        let errorMsg = `Error ${res.status}`;
+        try {
+          const errorData = await res.json();
+          errorMsg += `: ${errorData.details || errorData.error}`;
+        } catch {
+          errorMsg += ": Fallo crítico del servidor (Respuesta no JSON)";
+        }
+        throw new Error(errorMsg);
       }
       
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("El servidor no devolvió JSON");
+      }
+
       const data = await res.json();
-      console.log("[DB] Datos recuperados:", { 
-        usuarios: data.users?.length || 0, 
-        registros: data.shifts?.length || 0 
-      });
-      
       return {
         users: data.users || [],
         shifts: data.shifts || []
       };
-    } catch (e) {
-      console.error("[DB] Error en _fetchData:", e);
-      // Devolvemos una estructura básica para no romper la app
+    } catch (e: any) {
+      console.error("[DB] Error capturado en _fetchData:", e.message);
+      // Retornar vacío para evitar que la app explote, pero permitir reintentos manuales
       return { users: [], shifts: [] };
     }
   },
@@ -50,7 +55,6 @@ export const db = {
       
       if (!res.ok) {
         const errorText = await res.text();
-        console.error("[DB] Error al guardar en servidor:", errorText);
         throw new Error(`Error ${res.status}: ${errorText || 'Fallo al guardar'}`);
       }
       

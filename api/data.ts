@@ -21,12 +21,30 @@ export default async function handler(req: any, res: any) {
       }
 
       console.log("[API] Recuperando datos desde:", dbBlob.url);
-      const response = await fetch(dbBlob.url);
-      const data = await response.json();
-      return res.status(200).json(data);
+      
+      // Fetch con no-cache para evitar recibir errores HTML cacheados
+      const response = await fetch(dbBlob.url, { cache: 'no-store' });
+      
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Blob URL returned ${response.status}: ${text.substring(0, 100)}`);
+      }
+
+      const text = await response.text();
+      try {
+        const data = JSON.parse(text);
+        return res.status(200).json(data);
+      } catch (parseError) {
+        console.error("[API] El contenido del blob no es JSON válido:", text.substring(0, 200));
+        throw new Error("Blob content is not a valid JSON");
+      }
+      
     } catch (error: any) {
       console.error("Error en GET /api/data:", error);
-      return res.status(500).json({ error: 'Failed to fetch data', details: error.message });
+      return res.status(500).json({ 
+        error: 'Failed to fetch data', 
+        details: error.message 
+      });
     }
   }
 
@@ -36,12 +54,10 @@ export default async function handler(req: any, res: any) {
       console.log("[API] Recibiendo datos para guardar...");
       const newData = req.body;
       
-      if (!newData) {
-        return res.status(400).json({ error: 'Body missing' });
+      if (!newData || typeof newData !== 'object') {
+        return res.status(400).json({ error: 'Invalid data format' });
       }
 
-      // IMPORTANTE: addRandomSuffix: false + allowOverwrite: true 
-      // permite que el archivo funcione como una base de datos de un solo archivo.
       const { url } = await put(DB_FILENAME, JSON.stringify(newData), {
         access: 'public',
         addRandomSuffix: false,
