@@ -2,11 +2,14 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { User, Shift } from '../types';
 import { db } from '../services/database';
+import { QRCodeSVG } from 'qrcode.react';
 
 const AdminDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [selectedUserQR, setSelectedUserQR] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [globalShifts, setGlobalShifts] = useState<Shift[]>([]);
@@ -46,46 +49,27 @@ const AdminDashboard: React.FC = () => {
 
   const exportGlobalReport = () => {
     const now = new Date();
-    
-    // Inicio de Hoy
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    
-    // Inicio de Semana (Lunes)
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
     const startOfWeek = new Date();
     const day = startOfWeek.getDay();
     const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
     startOfWeek.setDate(diff);
     startOfWeek.setHours(0, 0, 0, 0);
-    
-    // Inicio de Mes
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const headers = ["Nombre", "Email", "Rol", "Horas Hoy", "Horas Semana", "Horas Mes", "Horas Totales"];
-    
     const rows = allUsers.map(u => {
       const userShifts = globalShifts.filter(s => s.userId === u.id && s.endTime);
-      
       const sumHours = (filterFn: (d: Date) => boolean) => {
         return userShifts
           .filter(s => filterFn(new Date(s.startTime)))
           .reduce((acc, s) => acc + (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 3600000, 0)
           .toFixed(2);
       };
-
-      return [
-        u.name,
-        u.email,
-        u.role === 'admin' ? 'Administrador' : 'Empleado',
-        sumHours(d => d >= startOfToday),
-        sumHours(d => d >= startOfWeek),
-        sumHours(d => d >= startOfMonth),
-        sumHours(() => true)
-      ];
+      return [ u.name, u.email, u.role === 'admin' ? 'Administrador' : 'Empleado', sumHours(d => d >= startOfToday), sumHours(d => d >= startOfWeek), sumHours(d => d >= startOfMonth), sumHours(() => true) ];
     });
 
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-    // BOM para compatibilidad con Excel en español
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -114,16 +98,19 @@ const AdminDashboard: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const openQRModal = (user: User) => {
+    setSelectedUserQR(user);
+    setIsQRModalOpen(true);
+  };
+
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (allUsers.some(u => u.email === formData.email && u.id !== editingUser?.id)) {
       setError('Email ya en uso por otro miembro.'); return;
     }
-    
     const userData: User = editingUser 
       ? { ...editingUser, ...formData }
       : { id: crypto.randomUUID(), ...formData, createdAt: new Date().toISOString() };
-    
     await db.saveUser(userData);
     await loadData();
     setIsModalOpen(false);
@@ -134,6 +121,11 @@ const AdminDashboard: React.FC = () => {
       await db.deleteUser(userId);
       await loadData();
     }
+  };
+
+  const loginUrl = (email: string) => {
+    const base = window.location.origin + window.location.pathname;
+    return `${base}?login_email=${encodeURIComponent(email)}`;
   };
 
   if (isLoading) {
@@ -147,31 +139,82 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 no-print">
         <div>
           <h2 className="text-3xl font-bold text-stone-900 tracking-tight">Gestión de Ecosistema</h2>
           <p className="text-stone-500 font-medium">Supervisión y armonización de la plantilla de TOT HERBA</p>
         </div>
         <div className="flex gap-3">
-          <button 
-            onClick={exportGlobalReport}
-            className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2 border border-stone-200"
-          >
-            <i className="fas fa-file-excel"></i>
-            Descargar Reporte Global
+          <button onClick={exportGlobalReport} className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2 border border-stone-200">
+            <i className="fas fa-file-excel"></i> Descargar Reporte
           </button>
-          <button 
-            onClick={openAddModal}
-            className="bg-emerald-800 hover:bg-emerald-900 text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-emerald-900/20 transition-all flex items-center gap-2"
-          >
-            <i className="fas fa-plus"></i>
-            Nuevo Miembro
+          <button onClick={openAddModal} className="bg-emerald-800 hover:bg-emerald-900 text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-emerald-900/20 transition-all flex items-center gap-2">
+            <i className="fas fa-plus"></i> Nuevo Miembro
           </button>
         </div>
       </div>
 
+      {/* QR MODAL */}
+      {isQRModalOpen && selectedUserQR && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md no-print">
+          <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-in">
+             <div className="p-8 text-center space-y-6">
+                <div className="flex flex-col items-center gap-2">
+                   <h1 className="text-xl font-black text-emerald-900 tracking-[0.2em] uppercase">TOT<span className="text-stone-400 font-light">HERBA</span></h1>
+                   <div className="w-12 h-0.5 bg-emerald-800 rounded-full"></div>
+                </div>
+                
+                <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100 inline-block shadow-inner">
+                  <QRCodeSVG 
+                    value={loginUrl(selectedUserQR.email)} 
+                    size={200} 
+                    level="H"
+                    includeMargin={false}
+                    className="mx-auto"
+                    imageSettings={{
+                      src: "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/svgs/solid/leaf.svg",
+                      x: undefined, y: undefined, height: 40, width: 40, excavate: true,
+                    }}
+                  />
+                </div>
+
+                <div>
+                   <h3 className="text-2xl font-bold text-stone-900">{selectedUserQR.name}</h3>
+                   <p className="text-stone-400 text-xs font-bold uppercase tracking-widest mt-1">{selectedUserQR.email}</p>
+                </div>
+
+                <div className="pt-4 flex flex-col gap-3">
+                   <button onClick={() => window.print()} className="w-full py-4 bg-emerald-800 text-white rounded-2xl font-bold hover:bg-emerald-900 transition-all shadow-lg shadow-emerald-900/10 flex items-center justify-center gap-2">
+                     <i className="fas fa-print"></i> Imprimir Tarjeta de Acceso
+                   </button>
+                   <button onClick={() => setIsQRModalOpen(false)} className="w-full py-3 text-stone-400 font-bold hover:text-stone-600 transition-colors">Cerrar</button>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tarjeta de impresión oculta en pantalla pero visible en papel */}
+      <div className="hidden print-only fixed inset-0 bg-white items-center justify-center">
+         {selectedUserQR && (
+           <div className="border-[12px] border-emerald-800 p-16 rounded-[4rem] text-center max-w-lg mx-auto mt-20">
+              <h1 className="text-5xl font-black text-emerald-900 tracking-[0.2em] uppercase mb-10">TOT HERBA</h1>
+              <div className="bg-white p-4 border-2 border-stone-100 inline-block mb-10">
+                 <QRCodeSVG value={loginUrl(selectedUserQR.email)} size={400} />
+              </div>
+              <h2 className="text-6xl font-bold text-stone-900 mb-4">{selectedUserQR.name}</h2>
+              <p className="text-2xl text-stone-500 font-medium">Escanea para iniciar sesión</p>
+              <div className="mt-16 pt-8 border-t-2 border-stone-100 flex items-center justify-center gap-4">
+                 <span className="text-xl font-bold text-emerald-800">AUTHEX S.A</span>
+                 <span className="text-stone-300">|</span>
+                 <span className="text-xl font-medium text-stone-400">Control de Horarios Profesional</span>
+              </div>
+           </div>
+         )}
+      </div>
+
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm no-print">
           <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in">
             <div className="px-10 py-8 border-b border-stone-100 flex justify-between items-center bg-stone-50">
               <h3 className="text-xl font-bold text-stone-900">{editingUser ? 'Actualizar Miembro' : 'Alta de Miembro'}</h3>
@@ -202,7 +245,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 no-print">
         {[
           { label: 'Plantilla', val: allUsers.length, color: 'text-stone-900', icon: 'fa-users' },
           { label: 'En Jornada', val: employeeStats.filter(e => e.isActive).length, color: 'text-emerald-700', icon: 'fa-sun' },
@@ -219,11 +262,10 @@ const AdminDashboard: React.FC = () => {
         ))}
       </div>
 
-      <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden no-print">
         <div className="px-10 py-8 border-b border-stone-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-stone-50/50">
           <h3 className="font-bold text-stone-800 flex items-center gap-3">
-            <i className="fas fa-list-ul text-emerald-700"></i>
-            Listado de Colaboradores
+            <i className="fas fa-list-ul text-emerald-700"></i> Listado de Colaboradores
           </h3>
           <div className="relative w-full sm:w-80">
             <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-stone-300"></i>
@@ -243,9 +285,7 @@ const AdminDashboard: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-stone-50">
               {employeeStats.length === 0 ? (
-                <tr>
-                   <td colSpan={5} className="px-10 py-12 text-center text-stone-400 italic">No se encontraron colaboradores.</td>
-                </tr>
+                <tr> <td colSpan={5} className="px-10 py-12 text-center text-stone-400 italic">No se encontraron colaboradores.</td> </tr>
               ) : (
                 employeeStats.map(emp => (
                   <tr key={emp.id} className="group hover:bg-stone-50 transition-colors">
@@ -270,6 +310,7 @@ const AdminDashboard: React.FC = () => {
                     <td className="px-10 py-6"><span className="font-mono font-bold text-stone-700 text-sm">{emp.totalHours}h</span></td>
                     <td className="px-10 py-6 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => openQRModal(emp)} className="p-2 text-stone-400 hover:text-emerald-800 hover:bg-emerald-50 rounded-xl transition-all" title="Ver Tarjeta QR de Acceso"><i className="fas fa-qrcode"></i></button>
                         <button onClick={() => openEditModal(emp)} className="p-2 text-stone-400 hover:text-emerald-800 hover:bg-emerald-50 rounded-xl transition-all" title="Editar"><i className="fas fa-pencil"></i></button>
                         <button onClick={() => handleDeleteUser(emp.id, emp.name)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Eliminar"><i className="fas fa-trash"></i></button>
                       </div>

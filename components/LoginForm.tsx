@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface LoginFormProps {
   onLogin: (email: string) => void;
@@ -9,6 +9,17 @@ interface LoginFormProps {
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onSwitchToRegister, isLoading = false }) => {
   const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    // Capturar el email de la URL si viene de un escaneo de QR
+    const params = new URLSearchParams(window.location.search);
+    const emailParam = params.get('login_email');
+    if (emailParam) {
+      setEmail(emailParam);
+      // Limpiar la URL para que no quede el parámetro ahí
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
