@@ -2,14 +2,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { User, Shift } from '../types';
 import { db } from '../services/database';
-import { QRCodeSVG } from 'qrcode.react';
 
 const AdminDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
-  const [selectedUserQR, setSelectedUserQR] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [globalShifts, setGlobalShifts] = useState<Shift[]>([]);
@@ -98,11 +95,6 @@ const AdminDashboard: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const openQRModal = (user: User) => {
-    setSelectedUserQR(user);
-    setIsQRModalOpen(true);
-  };
-
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (allUsers.some(u => u.email === formData.email && u.id !== editingUser?.id)) {
@@ -123,11 +115,6 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const loginUrl = (email: string) => {
-    const base = window.location.origin + window.location.pathname;
-    return `${base}?login_email=${encodeURIComponent(email)}`;
-  };
-
   if (isLoading) {
     return (
       <div className="h-96 flex flex-col items-center justify-center gap-4">
@@ -139,7 +126,7 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 no-print">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold text-stone-900 tracking-tight">Gestión de Ecosistema</h2>
           <p className="text-stone-500 font-medium">Supervisión y armonización de la plantilla de TOT HERBA</p>
@@ -154,67 +141,8 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* QR MODAL */}
-      {isQRModalOpen && selectedUserQR && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md no-print">
-          <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-in">
-             <div className="p-8 text-center space-y-6">
-                <div className="flex flex-col items-center gap-2">
-                   <h1 className="text-xl font-black text-emerald-900 tracking-[0.2em] uppercase">TOT<span className="text-stone-400 font-light">HERBA</span></h1>
-                   <div className="w-12 h-0.5 bg-emerald-800 rounded-full"></div>
-                </div>
-                
-                <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100 inline-block shadow-inner">
-                  <QRCodeSVG 
-                    value={loginUrl(selectedUserQR.email)} 
-                    size={200} 
-                    level="H"
-                    includeMargin={false}
-                    className="mx-auto"
-                    imageSettings={{
-                      src: "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/svgs/solid/leaf.svg",
-                      x: undefined, y: undefined, height: 40, width: 40, excavate: true,
-                    }}
-                  />
-                </div>
-
-                <div>
-                   <h3 className="text-2xl font-bold text-stone-900">{selectedUserQR.name}</h3>
-                   <p className="text-stone-400 text-xs font-bold uppercase tracking-widest mt-1">{selectedUserQR.email}</p>
-                </div>
-
-                <div className="pt-4 flex flex-col gap-3">
-                   <button onClick={() => window.print()} className="w-full py-4 bg-emerald-800 text-white rounded-2xl font-bold hover:bg-emerald-900 transition-all shadow-lg shadow-emerald-900/10 flex items-center justify-center gap-2">
-                     <i className="fas fa-print"></i> Imprimir Tarjeta de Acceso
-                   </button>
-                   <button onClick={() => setIsQRModalOpen(false)} className="w-full py-3 text-stone-400 font-bold hover:text-stone-600 transition-colors">Cerrar</button>
-                </div>
-             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tarjeta de impresión oculta en pantalla pero visible en papel */}
-      <div className="hidden print-only fixed inset-0 bg-white items-center justify-center">
-         {selectedUserQR && (
-           <div className="border-[12px] border-emerald-800 p-16 rounded-[4rem] text-center max-w-lg mx-auto mt-20">
-              <h1 className="text-5xl font-black text-emerald-900 tracking-[0.2em] uppercase mb-10">TOT HERBA</h1>
-              <div className="bg-white p-4 border-2 border-stone-100 inline-block mb-10">
-                 <QRCodeSVG value={loginUrl(selectedUserQR.email)} size={400} />
-              </div>
-              <h2 className="text-6xl font-bold text-stone-900 mb-4">{selectedUserQR.name}</h2>
-              <p className="text-2xl text-stone-500 font-medium">Escanea para iniciar sesión</p>
-              <div className="mt-16 pt-8 border-t-2 border-stone-100 flex items-center justify-center gap-4">
-                 <span className="text-xl font-bold text-emerald-800">AUTHEX S.A</span>
-                 <span className="text-stone-300">|</span>
-                 <span className="text-xl font-medium text-stone-400">Control de Horarios Profesional</span>
-              </div>
-           </div>
-         )}
-      </div>
-
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm no-print">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm">
           <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in">
             <div className="px-10 py-8 border-b border-stone-100 flex justify-between items-center bg-stone-50">
               <h3 className="text-xl font-bold text-stone-900">{editingUser ? 'Actualizar Miembro' : 'Alta de Miembro'}</h3>
@@ -245,7 +173,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 no-print">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
           { label: 'Plantilla', val: allUsers.length, color: 'text-stone-900', icon: 'fa-users' },
           { label: 'En Jornada', val: employeeStats.filter(e => e.isActive).length, color: 'text-emerald-700', icon: 'fa-sun' },
@@ -262,7 +190,7 @@ const AdminDashboard: React.FC = () => {
         ))}
       </div>
 
-      <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden no-print">
+      <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
         <div className="px-10 py-8 border-b border-stone-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-stone-50/50">
           <h3 className="font-bold text-stone-800 flex items-center gap-3">
             <i className="fas fa-list-ul text-emerald-700"></i> Listado de Colaboradores
@@ -310,7 +238,6 @@ const AdminDashboard: React.FC = () => {
                     <td className="px-10 py-6"><span className="font-mono font-bold text-stone-700 text-sm">{emp.totalHours}h</span></td>
                     <td className="px-10 py-6 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openQRModal(emp)} className="p-2 text-stone-400 hover:text-emerald-800 hover:bg-emerald-50 rounded-xl transition-all" title="Ver Tarjeta QR de Acceso"><i className="fas fa-qrcode"></i></button>
                         <button onClick={() => openEditModal(emp)} className="p-2 text-stone-400 hover:text-emerald-800 hover:bg-emerald-50 rounded-xl transition-all" title="Editar"><i className="fas fa-pencil"></i></button>
                         <button onClick={() => handleDeleteUser(emp.id, emp.name)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Eliminar"><i className="fas fa-trash"></i></button>
                       </div>
