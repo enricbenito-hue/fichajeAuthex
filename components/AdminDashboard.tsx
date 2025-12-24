@@ -3,6 +3,14 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { User, Shift } from '../types';
 import { db } from '../services/database';
 
+// Fallback para IDs
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).substring(2, 15);
+};
+
 const AdminDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
@@ -16,11 +24,16 @@ const AdminDashboard: React.FC = () => {
 
   const loadData = async () => {
     setIsLoading(true);
-    const users = await db.getAllUsers();
-    const shifts = await db.getAllGlobalShifts();
-    setAllUsers(users);
-    setGlobalShifts(shifts);
-    setIsLoading(false);
+    try {
+      const users = await db.getAllUsers();
+      const shifts = await db.getAllGlobalShifts();
+      setAllUsers(users);
+      setGlobalShifts(shifts);
+    } catch (e) {
+      console.error("Error cargando datos:", e);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -45,26 +58,10 @@ const AdminDashboard: React.FC = () => {
   }, [allUsers, globalShifts, searchTerm]);
 
   const exportGlobalReport = () => {
-    const now = new Date();
-    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
-    const startOfWeek = new Date();
-    const day = startOfWeek.getDay();
-    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
-    startOfWeek.setDate(diff);
-    startOfWeek.setHours(0, 0, 0, 0);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const headers = ["Nombre", "Email", "Rol", "Horas Hoy", "Horas Semana", "Horas Mes", "Horas Totales"];
-    const rows = allUsers.map(u => {
-      const userShifts = globalShifts.filter(s => s.userId === u.id && s.endTime);
-      const sumHours = (filterFn: (d: Date) => boolean) => {
-        return userShifts
-          .filter(s => filterFn(new Date(s.startTime)))
-          .reduce((acc, s) => acc + (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 3600000, 0)
-          .toFixed(2);
-      };
-      return [ u.name, u.email, u.role === 'admin' ? 'Administrador' : 'Empleado', sumHours(d => d >= startOfToday), sumHours(d => d >= startOfWeek), sumHours(d => d >= startOfMonth), sumHours(() => true) ];
-    });
+    const headers = ["Nombre", "Email", "Rol", "Horas Totales"];
+    const rows = employeeStats.map(u => [
+      u.name, u.email, u.role === 'admin' ? 'Administrador' : 'Empleado', u.totalHours
+    ]);
 
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -102,7 +99,8 @@ const AdminDashboard: React.FC = () => {
     }
     const userData: User = editingUser 
       ? { ...editingUser, ...formData }
-      : { id: crypto.randomUUID(), ...formData, createdAt: new Date().toISOString() };
+      : { id: generateId(), ...formData, createdAt: new Date().toISOString() };
+    
     await db.saveUser(userData);
     await loadData();
     setIsModalOpen(false);
